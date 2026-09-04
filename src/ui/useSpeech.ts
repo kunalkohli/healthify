@@ -23,6 +23,16 @@ function getRecognition(): SR | null {
   return C ? new C() : null;
 }
 
+/** iOS runs home-screen web apps in standalone mode, where WebKit often
+ *  withholds SpeechRecognition even though Safari tabs have it. */
+export function isStandalone(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    (window.matchMedia?.("(display-mode: standalone)").matches ||
+      (navigator as any).standalone === true)
+  );
+}
+
 export type SpeechState = {
   supported: boolean;
   listening: boolean;

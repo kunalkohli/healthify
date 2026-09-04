@@ -23,7 +23,7 @@ import { chat, extractMemories } from "../core/agent/loop.ts";
 import { configProblem, type ProviderConfig } from "../core/agent/providers/index.ts";
 import { Button, Empty } from "./primitives.tsx";
 import { IconMic, IconSend, IconStop } from "./icons.tsx";
-import { useSpeech } from "./useSpeech.ts";
+import { isStandalone, useSpeech } from "./useSpeech.ts";
 import { Markdown } from "./Markdown.tsx";
 
 const SUGGESTIONS = [
@@ -61,6 +61,7 @@ export function Chat({
 
   // Dictated speech is appended to whatever is already typed, so you can mix
   // voice and keyboard freely.
+  const [micHint, setMicHint] = useState(false);
   const speech = useSpeech((finalText) =>
     setInput((prev) => (prev ? `${prev.replace(/\s+$/, "")} ${finalText.trim()}` : finalText.trim())),
   );
@@ -300,10 +301,20 @@ export function Chat({
             {speech.error}
           </div>
         )}
+        {micHint && !speech.supported && (
+          <div className="pb-2 text-[13px] text-[var(--color-muted)] leading-relaxed">
+            {isStandalone()
+              ? "iOS doesn't give home-screen apps in-app dictation. Tap the message box and use the microphone on the keyboard instead — same result. Opening the site in a Safari tab enables this button."
+              : "This browser doesn't support in-app dictation. On iPhone, tap the message box and use the keyboard's microphone."}
+          </div>
+        )}
         <div className="flex gap-2 items-end">
-          {speech.supported && (
+          {
             <button
-              onClick={() => (speech.listening ? speech.stop() : speech.start())}
+              onClick={() => {
+                if (!speech.supported) return setMicHint(!micHint);
+                speech.listening ? speech.stop() : speech.start();
+              }}
               disabled={busy}
               aria-label={speech.listening ? "Stop dictation" : "Dictate"}
               className={`shrink-0 w-11 h-11 rounded-full flex items-center justify-center border transition-colors disabled:opacity-30 ${
@@ -314,7 +325,7 @@ export function Chat({
             >
               {speech.listening ? <IconStop /> : <IconMic />}
             </button>
-          )}
+          }
           <textarea
             rows={1}
             value={input}
