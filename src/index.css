@@ -1,0 +1,118 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #ffffff;
+  --color-surface: #f7f7f8;
+  --color-surface-2: #ededf0;
+  --color-line: #e2e2e6;
+  --color-ink: #101014;
+  --color-muted: #6c6c75;
+
+  /* Fills use accent; text uses accent-ink for contrast on white. */
+  --color-accent: #16a34a;
+  --color-accent-ink: #15803d;
+  --color-accent-soft: #eefbf2;
+
+  --color-warn: #b45309;
+  --color-warn-soft: #fff8ed;
+  --color-danger: #b91c1c;
+  --color-danger-soft: #fef4f4;
+
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+}
+
+/* Force light regardless of the phone's system setting. */
+:root {
+  color-scheme: light;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/*
+ * Combined padding + home-indicator inset in ONE declaration.
+ * Using `pb-3 safe-bottom` together meant two rules both setting
+ * padding-bottom, with the winner decided by source order.
+ */
+.pb-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 0.75rem);
+}
+
+/*
+ * iOS Safari tints its bottom toolbar by sampling the page colour at the
+ * bottom edge. Anchoring an opaque white band there keeps the toolbar white
+ * instead of picking up the green action button.
+ */
+body::after {
+  content: "";
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: env(safe-area-inset-bottom);
+  background: var(--color-bg);
+  pointer-events: none;
+  z-index: 60;
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+  color: inherit;
+}
+
+/* 16px minimum stops iOS zooming the viewport on focus. */
+input,
+select,
+textarea {
+  font-size: 16px;
+}
+
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.dot {
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
+.dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
