@@ -7,7 +7,7 @@ import {
   type VaultMeta,
 } from "../storage/crypto.ts";
 import * as db from "../storage/db.ts";
-import { Button, H1, Screen, Sub, TextInput } from "./primitives.tsx";
+import { Button, H1, Screen, Sub } from "./primitives.tsx";
 
 /**
  * Gate in front of the app.
@@ -25,9 +25,11 @@ export function Lock({
 }) {
   const [pass, setPass] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [reveal, setReveal] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [faceIdReady, setFaceIdReady] = useState(false);
+  const [showRescue, setShowRescue] = useState(false);
 
   const available = db.cryptoAvailable();
 
@@ -35,7 +37,6 @@ export function Lock({
     if (meta?.prf) isPlatformAuthenticatorAvailable().then(setFaceIdReady);
   }, [meta]);
 
-  // Offer Face ID immediately — it's the fast path when enrolled.
   useEffect(() => {
     if (faceIdReady && meta?.prf) void tryFaceId();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -49,7 +50,6 @@ export function Lock({
       db.setDek(await unlockWithFaceId(meta));
       onUnlocked();
     } catch (e) {
-      // Cancelling Face ID is normal; fall through to the passphrase field.
       const msg = e instanceof Error ? e.message : String(e);
       if (!/NotAllowed|cancel|abort/i.test(msg)) setError(msg);
     } finally {
@@ -66,7 +66,9 @@ export function Lock({
       setPass("");
       onUnlocked();
     } catch {
-      setError("That passphrase didn't work.");
+      setError(
+        "That passphrase didn't work. Check capitalisation and any leading or trailing space — tap Show to see exactly what you typed.",
+      );
     } finally {
       setBusy(false);
     }
@@ -81,7 +83,6 @@ export function Lock({
       const { meta: m, dek } = await createVault(pass);
       db.setDek(dek);
       await db.saveVaultMeta(m);
-      // Anything written before the vault existed gets encrypted now.
       await db.encryptExistingData();
       setPass("");
       setConfirm("");
@@ -91,6 +92,19 @@ export function Lock({
     } finally {
       setBusy(false);
     }
+  }
+
+  /** The only way out of a forgotten passphrase. Destroys everything. */
+  async function doEraseAndRestart() {
+    if (
+      !confirmTwice(
+        "Erase all data on this device and start over?",
+        "Last chance — this permanently deletes your profile, family history, chats and settings. There is no backup unless you exported one.",
+      )
+    )
+      return;
+    await db.destroyVault();
+    location.reload();
   }
 
   // ---------- no secure context ----------
@@ -126,38 +140,33 @@ export function Lock({
       <Screen>
         <H1>Set a passphrase</H1>
         <Sub>
-          This encrypts everything on this device. You can add Face ID afterwards for quick
-          unlocking.
+          This encrypts everything on this device. You can add Face ID afterwards so you rarely
+          have to type it.
         </Sub>
 
-        <div className="mb-4">
-          <TextInput
-            type="password"
-            value={pass}
-            onChange={(e) => setPass(e.target.value)}
-            placeholder="Passphrase"
-            autoCapitalize="off"
-            autoCorrect="off"
-            spellCheck={false}
-          />
-        </div>
-        <div className="mb-4">
-          <TextInput
-            type="password"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            placeholder="Confirm passphrase"
-            autoCapitalize="off"
-            autoCorrect="off"
-            spellCheck={false}
-            onKeyDown={(e) => e.key === "Enter" && doCreate()}
-          />
-        </div>
+        <PassField
+          value={pass}
+          onChange={setPass}
+          reveal={reveal}
+          onReveal={() => setReveal(!reveal)}
+          placeholder="Passphrase"
+          autoComplete="new-password"
+          name="new-password"
+        />
+        <PassField
+          value={confirm}
+          onChange={setConfirm}
+          reveal={reveal}
+          placeholder="Confirm passphrase"
+          autoComplete="new-password"
+          name="confirm-password"
+          onEnter={doCreate}
+        />
 
         <div className="rounded-xl bg-[var(--color-warn-soft)] text-[var(--color-warn)] px-4 py-3 mb-4 text-[14px] leading-relaxed">
           There is no reset. The key is derived from this passphrase and nothing is stored on a
-          server, so if you forget it the data is unrecoverable. Put it in your password manager
-          now.
+          server, so if you forget it the only option is erasing and starting over. Save it to
+          your password manager now — tap Show first and check it character by character.
         </div>
 
         {error && <ErrorBox>{error}</ErrorBox>}
@@ -172,22 +181,20 @@ export function Lock({
   // ---------- unlock ----------
   return (
     <Screen>
-      <div className="pt-20" />
+      <div className="pt-16" />
       <H1>Locked</H1>
       <Sub>Enter your passphrase to open your health data.</Sub>
 
-      <div className="mb-4">
-        <TextInput
-          type="password"
-          value={pass}
-          onChange={(e) => setPass(e.target.value)}
-          placeholder="Passphrase"
-          autoCapitalize="off"
-          autoCorrect="off"
-          spellCheck={false}
-          onKeyDown={(e) => e.key === "Enter" && doUnlock()}
-        />
-      </div>
+      <PassField
+        value={pass}
+        onChange={setPass}
+        reveal={reveal}
+        onReveal={() => setReveal(!reveal)}
+        placeholder="Passphrase"
+        autoComplete="current-password"
+        name="password"
+        onEnter={doUnlock}
+      />
 
       {error && <ErrorBox>{error}</ErrorBox>}
 
@@ -201,7 +208,88 @@ export function Lock({
           </Button>
         )}
       </div>
+
+      {/* Escape hatch. Without this a mistyped passphrase bricks the app. */}
+      <div className="mt-10">
+        {showRescue ? (
+          <div className="rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] p-4">
+            <p className="text-[14px] leading-relaxed mb-3">
+              There's no recovery. The encryption key comes from your passphrase alone — nothing
+              is stored on a server, so nobody, including me, can unlock this for you.
+            </p>
+            <p className="text-[14px] leading-relaxed mb-3 text-[var(--color-muted)]">
+              Before erasing, try: tapping <strong>Show</strong> to check what you typed, turning
+              off autocapitalisation, and checking for a trailing space. If you saved an encrypted
+              backup you can restore it after erasing.
+            </p>
+            <Button variant="danger" onClick={doEraseAndRestart}>
+              Erase everything and start over
+            </Button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowRescue(true)}
+            className="w-full text-center text-[14px] text-[var(--color-muted)] underline underline-offset-2 py-2"
+          >
+            Forgotten your passphrase?
+          </button>
+        )}
+      </div>
     </Screen>
+  );
+}
+
+function confirmTwice(a: string, b: string): boolean {
+  return confirm(a) && confirm(b);
+}
+
+function PassField({
+  value,
+  onChange,
+  reveal,
+  onReveal,
+  placeholder,
+  autoComplete,
+  name,
+  onEnter,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  reveal: boolean;
+  onReveal?: () => void;
+  placeholder: string;
+  autoComplete: string;
+  name: string;
+  onEnter?: () => void;
+}) {
+  return (
+    <div className="relative mb-3">
+      <input
+        // Revealing uses type=text so iOS doesn't mask it; autoComplete keeps
+        // Keychain / 1Password able to save and refill it, which is the real
+        // fix for mistyped passphrases.
+        type={reveal ? "text" : "password"}
+        name={name}
+        autoComplete={autoComplete}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && onEnter?.()}
+        placeholder={placeholder}
+        autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck={false}
+        className="w-full rounded-xl bg-[var(--color-surface)] border border-[var(--color-line)] px-4 py-3 pr-20 outline-none focus:border-[var(--color-accent)] focus:bg-white"
+      />
+      {onReveal && (
+        <button
+          type="button"
+          onClick={onReveal}
+          className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg text-[13px] text-[var(--color-muted)] bg-white border border-[var(--color-line)]"
+        >
+          {reveal ? "Hide" : "Show"}
+        </button>
+      )}
+    </div>
   );
 }
 
