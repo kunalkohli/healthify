@@ -7,11 +7,11 @@ lines have to earn the click.
 
 ## Main post
 
-**763 characters.** Keep it under 800 — LinkedIn cuts to "see more" at
+**771 characters.** Keep it under 800 — LinkedIn cuts to "see more" at
 roughly 200, so the opening line has to say what the thing is.
 
 ```
-🩺 I built Healthify — a personal health companion that actually remembers you.
+🩺 I built Healthify — a personal health companion that remembers you and your history.
 
 Why? Every time I asked an AI about my health, I started from zero. Who I am, what runs in my family, what I won't eat, what I already tried.
 
