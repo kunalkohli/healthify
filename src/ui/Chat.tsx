@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   uid,
   type ChatMessage,
+  type CoachPlan,
   type JournalEntry,
   type MemoryFact,
   type Profile,
@@ -10,6 +11,7 @@ import { snapshot } from "../core/risk/index.ts";
 import {
   familyHistoryDoc,
   memoryDoc,
+  planDoc,
   profileDoc,
   riskDoc,
 } from "../core/context/generate.ts";
@@ -26,6 +28,9 @@ import { IconMic, IconSend, IconStop } from "./icons.tsx";
 import { isStandalone, useSpeech } from "./useSpeech.ts";
 import { Markdown } from "./Markdown.tsx";
 
+/** How many stored messages to replay into a resumed conversation. */
+const RECENT_TURNS = 12;
+
 const SUGGESTIONS = [
   "What should I eat this week to lower my diabetes risk?",
   "Explain my family history flags in plain terms",
@@ -37,6 +42,8 @@ export function Chat({
   profile,
   config,
   verbosity,
+  plan,
+  onPlan,
   messages,
   onMessages,
   memories,
@@ -47,6 +54,8 @@ export function Chat({
   profile: Profile;
   config: ProviderConfig;
   verbosity: Verbosity;
+  plan: CoachPlan | null;
+  onPlan: (p: CoachPlan) => void;
   messages: ChatMessage[];
   onMessages: (m: ChatMessage[]) => void;
   memories: MemoryFact[];
@@ -69,6 +78,21 @@ export function Chat({
 
   // Provider-native history (with tool blocks) kept separate from what we render.
   const history = useRef<any[]>([]);
+
+  /**
+   * Switching tabs unmounts this component and used to wipe the ref, so the
+   * model forgot a conversation that was still on screen. Rebuild a plain
+   * text history from the rendered messages on mount. Tool blocks are dropped
+   * — they can't be reconstructed and the model doesn't need them, only the
+   * conversational thread.
+   */
+  const seeded = useRef(false);
+  if (!seeded.current) {
+    seeded.current = true;
+    history.current = messages
+      .slice(-RECENT_TURNS)
+      .map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.content }));
+  }
 
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
@@ -102,6 +126,7 @@ export function Chat({
       familyDoc: familyHistoryDoc(profile),
       riskDoc: riskDoc(s),
       memoryDoc: memoryDoc(memories),
+      planDoc: planDoc(plan),
       today: new Date().toISOString().slice(0, 10),
       verbosity,
     });
@@ -120,6 +145,7 @@ export function Chat({
         toolContext: {
           profile,
           journal,
+          setPlan: (p) => onPlan(p),
           addMemory: (t, c) =>
             pendingMemories.push({
               id: uid(),
@@ -181,6 +207,23 @@ export function Chat({
       setBusy(false);
     }
   }
+
+  /**
+   * Distil on the way out of a substantial conversation, so remembering
+   * doesn't depend on noticing a button. Still only *proposes* — nothing is
+   * stored until it's approved.
+   */
+  const distilled = useRef(false);
+  useEffect(() => {
+    return () => {
+      if (distilled.current) return;
+      if (messages.length < 6) return;
+      if (configProblem(config)) return;
+      distilled.current = true;
+      void distil();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages.length, config]);
 
   const pending = memories.filter((m) => !m.approved);
 

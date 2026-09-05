@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
-import type { ChatMessage, JournalEntry, MemoryFact, Profile } from "./core/schema/index.ts";
+import type {
+  ChatMessage,
+  CoachPlan,
+  JournalEntry,
+  MemoryFact,
+  Profile,
+} from "./core/schema/index.ts";
 import {
   activeConfig,
   emptyProviderSettings,
@@ -45,6 +51,7 @@ export default function App() {
   const [units, setUnits] = useState<UnitSystem>("metric");
   const [labUnits, setLabUnits] = useState<LabUnitSystem>("si");
   const [verbosity, setVerbosity] = useState<Verbosity>("brief");
+  const [plan, setPlan] = useState<CoachPlan | null>(null);
 
   // Vault metadata is readable while locked; everything else is not.
   useEffect(() => {
@@ -55,7 +62,7 @@ export default function App() {
   }, []);
 
   const loadAll = async () => {
-      const [p, m, j, c, cfg, u, lu, vb, done] = await Promise.all([
+      const [p, m, j, c, cfg, u, lu, vb, pl, done] = await Promise.all([
         db.loadProfile(),
         db.loadMemories(),
         db.loadJournal(),
@@ -64,6 +71,7 @@ export default function App() {
         db.loadUnits(),
         db.loadLabUnits(),
         db.loadVerbosity(),
+        db.loadPlan(),
         db.loadOnboarded(),
       ]);
       setProfile(p);
@@ -74,6 +82,7 @@ export default function App() {
       setUnits(u);
       setLabUnits(lu);
       setVerbosity(vb);
+      setPlan(pl);
       setEditing(!done || !p);
       db.requestPersistence();
   };
@@ -102,6 +111,9 @@ export default function App() {
   useEffect(() => {
     if (ready && unlocked) db.saveVerbosity(verbosity);
   }, [verbosity, ready, unlocked]);
+  useEffect(() => {
+    if (ready && unlocked && plan) db.savePlan(plan);
+  }, [plan, ready, unlocked]);
 
   // Re-lock when the app goes to the background so a handed-over unlocked
   // phone doesn't expose the vault.
@@ -177,6 +189,8 @@ export default function App() {
             profile={profile}
             config={activeConfig(providers)}
             verbosity={verbosity}
+            plan={plan}
+            onPlan={setPlan}
             messages={messages}
             onMessages={setMessages}
             memories={memories}

@@ -27,6 +27,7 @@ export function systemPrompt(ctx: {
   familyDoc: string;
   riskDoc: string;
   memoryDoc: string;
+  planDoc: string;
   today: string;
   verbosity?: Verbosity;
 }): string {
@@ -67,6 +68,8 @@ ${ctx.riskDoc}
 # What you've learned about them
 
 ${ctx.memoryDoc}
+
+${ctx.planDoc}
 `;
 }
 

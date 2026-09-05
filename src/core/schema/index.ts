@@ -445,6 +445,22 @@ export const MemoryFact = z.object({
 });
 export type MemoryFact = z.infer<typeof MemoryFact>;
 
+/**
+ * A single rolling record of what the coach and you have currently agreed.
+ *
+ * Deliberately ONE document that gets overwritten, not an append-only log of
+ * session summaries. Facts capture what you're like; this captures what was
+ * decided. Both stay constant-size no matter how many conversations you have,
+ * which per-session summaries would not.
+ */
+export const CoachPlan = z.object({
+  focus: z.string(),
+  steps: z.array(z.string()),
+  openQuestions: z.array(z.string()),
+  updatedAt: z.string(),
+});
+export type CoachPlan = z.infer<typeof CoachPlan>;
+
 export const ChatMessage = z.object({
   id: z.string(),
   role: z.enum(["user", "assistant"]),

@@ -1,3 +1,4 @@
+import type { CoachPlan } from "../schema/index.ts";
 import {
   ANALYTE_META,
   CONDITION_LABELS,
@@ -119,82 +120,74 @@ export function familyHistoryDoc(p: Profile): string {
   return L.join("\n");
 }
 
+/**
+ * Compact risk summary for the system prompt.
+ *
+ * This is sent on every single turn, so it carries headline numbers only.
+ * The full breakdown — inputs used, every modifier, citations — is available
+ * on demand through the compute_risk and get_risk_summary tools, which the
+ * model calls when a question actually needs the detail. Inlining all of it
+ * cost ~1000 tokens a turn to answer questions that mostly didn't need it.
+ */
 export function riskDoc(s: RiskSnapshot): string {
-  const L: string[] = ["# Risk assessment", ""];
-  L.push(`Computed: ${s.computedAt}`);
-  L.push("");
+  const L: string[] = ["# Computed risk assessment", ""];
   L.push(
-    "> These numbers come from deterministic, published calculators — not from a language model. Quote them exactly; never estimate a risk figure that is not listed here.",
+    "> Deterministic calculators produced these. Quote them exactly. Never state a risk figure that is not here or returned by a tool. Call compute_risk for the full inputs, levers and citation.",
   );
   L.push("");
-
-  L.push(`## Body composition`);
   L.push(
-    `BMI ${s.bmi.bmi.toFixed(1)} — ${s.bmi.category}. Thresholds used: overweight ≥${s.bmi.thresholds.overweight}, obese ≥${s.bmi.thresholds.obese}. ${s.bmi.thresholds.rationale}`,
+    `BMI ${s.bmi.bmi.toFixed(1)} (${s.bmi.category}${s.bmi.thresholds.adjusted ? `, ancestry-adjusted threshold ${s.bmi.thresholds.overweight}` : ""})`,
   );
-  L.push("");
 
   for (const { model, outcome } of s.risks) {
-    L.push(`## ${model.name}`);
-    L.push(`_${model.question}_`);
-    L.push("");
-    if (outcome.status === "ok") {
-      L.push(`**Result: ${outcome.label} — ${BAND_LABEL[outcome.band]}**`);
-      L.push("");
-      L.push(outcome.summary);
-      L.push("");
-      L.push("Inputs used:");
-      for (const [k, v] of Object.entries(outcome.inputsUsed)) L.push(`- ${k}: ${v}`);
-      if (outcome.modifiers.length) {
-        L.push("");
-        L.push("What moves this:");
-        for (const m of outcome.modifiers)
-          L.push(`- [${m.impact}${m.modifiable ? "" : ", not modifiable"}] ${m.text}`);
-      }
-    } else if (outcome.status === "partial") {
-      L.push(`**Result: cannot compute yet**`);
-      L.push("");
-      L.push(outcome.summary);
-      L.push("");
-      L.push("Missing inputs:");
-      for (const m of outcome.missing) L.push(`- ${m.label} — ${m.why}`);
-      if (outcome.provisional) {
-        L.push("");
-        L.push(`${outcome.provisional.label}: ${outcome.provisional.detail}`);
-      }
-    } else {
-      L.push(`**Not applicable.** ${outcome.reason}`);
-    }
-    L.push("");
-    L.push(`Source: ${model.citation}`);
-    L.push("");
+    if (outcome.status === "ok")
+      L.push(`${model.name}: **${outcome.label}** — ${BAND_LABEL[outcome.band]}`);
+    else if (outcome.status === "partial")
+      L.push(
+        `${model.name}: cannot compute — missing ${outcome.missing.map((m) => m.label).join(", ")}`,
+      );
+    else L.push(`${model.name}: not applicable — ${outcome.reason}`);
   }
 
   if (s.metrics.length) {
-    L.push("## Other measures");
-    for (const m of s.metrics) {
-      L.push(`- **${m.label}: ${m.value}** (${BAND_LABEL[m.band]}) — ${m.detail}`);
-      if (m.citation) L.push(`  Source: ${m.citation}`);
-    }
     L.push("");
+    for (const m of s.metrics) L.push(`${m.label}: **${m.value}** (${BAND_LABEL[m.band]})`);
   }
 
   if (s.flags.length) {
+    L.push("");
     L.push("## Family history flags");
-    for (const f of s.flags) {
-      L.push(`### [${f.severity}] ${f.title}`);
-      L.push(f.detail);
-      if (f.action) L.push(`Action: ${f.action}`);
-      if (f.citation) L.push(`Source: ${f.citation}`);
-      L.push("");
-    }
+    for (const f of s.flags) L.push(`- [${f.severity}] ${f.title}`);
   }
 
   if (s.missing.length) {
-    L.push("## Tests worth asking a doctor for");
-    for (const m of s.missing) L.push(`- ${m.label} — ${m.why}`);
+    L.push("");
+    L.push(`## Tests worth asking for`);
+    L.push(s.missing.map((m) => m.label).join(", "));
   }
 
+  return L.join("\n");
+}
+
+/** Renders the agreed plan. Empty string when nothing has been set yet. */
+export function planDoc(plan: CoachPlan | null): string {
+  if (!plan) return "";
+  const L = ["# What we're currently working on", ""];
+  L.push(`Set ${plan.updatedAt.slice(0, 10)} — focus: ${plan.focus}`);
+  if (plan.steps.length) {
+    L.push("");
+    L.push("Agreed steps:");
+    for (const x of plan.steps) L.push(`- ${x}`);
+  }
+  if (plan.openQuestions.length) {
+    L.push("");
+    L.push("Still open:");
+    for (const x of plan.openQuestions) L.push(`- ${x}`);
+  }
+  L.push("");
+  L.push(
+    "Pick up from here rather than starting over. If this looks stale or already done, say so and offer to update it with set_plan.",
+  );
   return L.join("\n");
 }
 
@@ -210,7 +203,10 @@ export function memoryDoc(facts: MemoryFact[]): string {
     const rows = approved.filter((f) => f.category === c);
     if (!rows.length) continue;
     L.push(`## ${c[0].toUpperCase()}${c.slice(1)}`);
-    for (const r of rows) L.push(`- ${r.text}`);
+    // Dated so the model can judge staleness — a goal set 14 months ago
+    // should be revisited, not assumed current.
+    for (const r of rows)
+      L.push(`- ${r.text}${r.createdAt ? ` _(noted ${r.createdAt.slice(0, 10)})_` : ""}`);
     L.push("");
   }
   return L.join("\n");

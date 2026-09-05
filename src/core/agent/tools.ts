@@ -3,6 +3,7 @@ import {
   CONDITION_LABELS,
   type Analyte,
   type JournalEntry,
+  type CoachPlan,
   type MemoryFact,
   type Profile,
 } from "../schema/index.ts";
@@ -87,6 +88,28 @@ export const TOOLS: ToolDef[] = [
     },
   },
   {
+    name: "set_plan",
+    description:
+      "Record or update what you and the person have agreed to work on. Call this when you settle on a concrete plan, or when the existing plan is done or clearly stale. There is only ONE plan — calling this replaces it, so carry forward anything still relevant. Keep it short.",
+    input_schema: {
+      type: "object",
+      properties: {
+        focus: { type: "string", description: "One line: the single thing being worked on." },
+        steps: {
+          type: "array",
+          items: { type: "string" },
+          description: "Two to five concrete actions.",
+        },
+        openQuestions: {
+          type: "array",
+          items: { type: "string" },
+          description: "Anything unresolved, e.g. a test result being waited on.",
+        },
+      },
+      required: ["focus", "steps"],
+    },
+  },
+  {
     name: "log_entry",
     description: "Log something to the person's journal on their behalf when they tell you about it.",
     input_schema: {
@@ -104,6 +127,7 @@ export const TOOLS: ToolDef[] = [
 export type ToolContext = {
   profile: Profile;
   journal: JournalEntry[];
+  setPlan: (p: CoachPlan) => void;
   addMemory: (text: string, category: MemoryFact["category"]) => void;
   addJournal: (e: Omit<JournalEntry, "id" | "createdAt">) => void;
 };
@@ -211,6 +235,17 @@ export function runTool(name: string, input: Record<string, any>, ctx: ToolConte
     case "remember":
       ctx.addMemory(input.text, input.category);
       return `Queued for their approval: "${input.text}". Mention briefly that you've noted it; it won't apply until they confirm.`;
+
+    case "set_plan": {
+      const plan: CoachPlan = {
+        focus: String(input.focus ?? "").slice(0, 300),
+        steps: (input.steps ?? []).slice(0, 6).map((x: any) => String(x).slice(0, 200)),
+        openQuestions: (input.openQuestions ?? []).slice(0, 4).map((x: any) => String(x).slice(0, 200)),
+        updatedAt: new Date().toISOString(),
+      };
+      ctx.setPlan(plan);
+      return `Plan saved: ${plan.focus}. It will be shown at the start of every future conversation.`;
+    }
 
     case "log_entry":
       ctx.addJournal({

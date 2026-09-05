@@ -1,6 +1,7 @@
 import { del, get, set } from "idb-keyval";
 import type {
   ChatMessage,
+  CoachPlan,
   JournalEntry,
   MemoryFact,
   Profile,
@@ -36,11 +37,12 @@ const K = {
   units: "hc:units",
   labUnits: "hc:labunits",
   verbosity: "hc:verbosity",
+  plan: "hc:plan",
   onboarded: "hc:onboarded",
 };
 
 /** Encrypted keys. Unit prefs and the onboarded flag stay clear — they leak nothing. */
-const SECRET_KEYS = [K.profile, K.memories, K.journal, K.chat, K.config];
+const SECRET_KEYS = [K.profile, K.memories, K.journal, K.chat, K.config, K.plan];
 
 // ---------- key state (memory only) ----------
 
@@ -147,6 +149,13 @@ export async function saveChat(c: ChatMessage[]): Promise<void> {
   await putSecret(K.chat, c);
 }
 
+export async function loadPlan(): Promise<CoachPlan | null> {
+  return getSecret<CoachPlan | null>(K.plan, null);
+}
+export async function savePlan(p: CoachPlan): Promise<void> {
+  await putSecret(K.plan, p);
+}
+
 export async function loadProviderSettings(): Promise<ProviderSettings> {
   const raw = await getSecret<ProviderSettings | ProviderConfig | null>(K.config, null);
   if (!raw) return emptyProviderSettings();
@@ -211,14 +220,15 @@ export async function requestPersistence(): Promise<boolean> {
 // ---------- backup ----------
 
 export async function collectAll(): Promise<Record<string, unknown>> {
-  const [profile, memories, journal, chat, providers] = await Promise.all([
+  const [profile, memories, journal, chat, providers, plan] = await Promise.all([
     loadProfile(),
     loadMemories(),
     loadJournal(),
     loadChat(),
     loadProviderSettings(),
+    loadPlan(),
   ]);
-  return { version: 2, profile, memories, journal, chat, providers };
+  return { version: 3, profile, memories, journal, chat, providers, plan };
 }
 
 export async function restoreAll(d: any): Promise<void> {
@@ -227,5 +237,6 @@ export async function restoreAll(d: any): Promise<void> {
   if (d.journal) await saveJournal(d.journal);
   if (d.chat) await saveChat(d.chat);
   if (d.providers) await saveProviderSettings(d.providers);
+  if (d.plan) await savePlan(d.plan);
   await saveOnboarded(true);
 }
