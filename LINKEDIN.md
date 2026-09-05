@@ -7,56 +7,30 @@ lines have to earn the click.
 
 ## Main post
 
-🧠 Every time I asked an AI about my health, I started from zero.
+**723 characters.** Keep it under 800 — LinkedIn shows roughly the first
+200 before "see more", and short posts outperform long ones.
 
-Who I am. What runs in my family. What I won't eat. What I already tried that
-didn't work.
+```
+🧠 Every time I asked an AI about my health, I started from zero. Who I am, what runs in my family, what I won't eat.
 
-By the time I'd finished setting the scene, I'd lost the will to ask the
-question. A week later — same thing again.
+Health isn't a single conversation. It's longitudinal.
 
-But health doesn't work in single conversations. It's longitudinal. What matters
-is the trend, the history, the context you build up over months.
+So I built Healthify 🩺 — a health companion that remembers you.
 
-So I built **Healthify** 🩺 — a health companion that actually remembers you.
+📋 Give it your family history once. It builds a profile loaded into every future chat.
+💬 Then just ask. No re-explaining.
+💾 After each chat it distils what it learned into facts you approve. Tomorrow starts with all of it.
+🔒 Everything stays on your phone. No backend, no accounts, encrypted behind Face ID.
 
-📋 **You give it your history once**
-Family history — who had what, and at what age — plus your basics and any lab
-results. It builds a profile that loads into every future conversation.
+Open source — deploy your own.
 
-💬 **Then you just talk to it**
-What should I eat this week? What should I prioritise? What should I ask my
-doctor? It already has your context. No re-explaining.
+📖 https://kunalkohli.github.io/articles/2026-09/healthify
+💻 https://github.com/kunalkohli/healthify
 
-💾 **And it learns as you go**
-At the end of a conversation it distils what it picked up into durable facts —
-*"won't eat fish"*, *"travels a week a month"*, *"goal: lower blood pressure
-before March"* — and asks you to approve each one. Tomorrow's chat starts with
-all of it already loaded.
+⚠️ Not a medical device. Talk to a doctor.
 
-That last part is the whole thing. It stops being a chatbot you brief every time
-and starts being a companion that knows you.
-
-🔒 **All of it stays on your device**
-Your family history, your labs, your conversations — none of it goes to a
-server, because there isn't one. No backend, no database, no accounts, no
-sign-up. It's encrypted in your phone's own storage behind a passphrase and
-Face ID, and I couldn't read it even if I wanted to.
-
-I did consider a hosted version with accounts. That idea lasted about ten
-minutes — it would have meant volunteering to hold other people's family
-medical history.
-
-Open source — deploy your own copy in about ten minutes. It's yours, not mine.
-
-📖 Write-up: https://kunalkohli.github.io/articles/2026-09/healthify
-💻 Code: https://github.com/kunalkohli/healthify
-
-⚠️ Not a medical device. Educational only — talk to an actual doctor.
-
-#BuildInPublic #AI #LocalFirst #OpenSource #HealthTech
-
----
+#BuildInPublic #AI #LocalFirst #OpenSource
+```
 
 ## Alternative — engineering angle
 
