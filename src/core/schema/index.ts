@@ -442,8 +442,21 @@ export const MemoryFact = z.object({
   /** Where this came from, so you can audit why the coach believes something. */
   sourceSessionId: z.string().nullable(),
   approved: z.boolean(),
+  /**
+   * Set when a later fact contradicts this one. Superseded facts stay on
+   * record for auditability but are excluded from the prompt — otherwise
+   * "skips breakfast" and "now eats breakfast" would both be presented as
+   * current and the model would have to guess.
+   */
+  supersededAt: z.string().nullable().optional(),
+  /** Id of the fact this one replaces, if any. */
+  replacesId: z.string().nullable().optional(),
 });
 export type MemoryFact = z.infer<typeof MemoryFact>;
+
+export function liveFacts(facts: MemoryFact[]): MemoryFact[] {
+  return facts.filter((f) => f.approved && !f.supersededAt);
+}
 
 /**
  * A single rolling record of what the coach and you have currently agreed.

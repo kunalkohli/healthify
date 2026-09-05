@@ -74,6 +74,25 @@ ${ctx.planDoc}
 }
 
 /** Second-pass prompt: distil durable facts from a conversation. */
+export function memoryExtractionPrompt(existing: { id: string; text: string }[]): string {
+  const known = existing.length
+    ? existing.map((f, i) => `${i + 1}. [${f.id}] ${f.text}`).join("\n")
+    : "(nothing recorded yet)";
+  return `${MEMORY_EXTRACTION_PROMPT}
+
+# Already known about them
+
+${known}
+
+If something in this conversation CONTRADICTS or UPDATES one of the facts above —
+they used to skip breakfast and now don't, a goal has been met, a preference has
+changed — return the corrected fact and set "replaces" to that fact's id in
+square brackets. Do not return a near-duplicate of something already listed;
+either replace it or leave it alone.
+
+Each item: {"text": string, "category": "preference"|"constraint"|"goal"|"history"|"context", "replaces": string|null}`;
+}
+
 export const MEMORY_EXTRACTION_PROMPT = `You are reviewing a conversation between a health coach and their client to extract durable facts worth remembering long-term.
 
 Extract ONLY facts that will still be true and useful in three months. Good examples:

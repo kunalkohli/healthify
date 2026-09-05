@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  liveFacts,
   uid,
   type ChatMessage,
   type CoachPlan,
@@ -16,8 +17,8 @@ import {
   riskDoc,
 } from "../core/context/generate.ts";
 import {
-  MEMORY_EXTRACTION_PROMPT,
   VERBOSITY_MAX_TOKENS,
+  memoryExtractionPrompt,
   systemPrompt,
   type Verbosity,
 } from "../core/agent/prompts.ts";
@@ -196,8 +197,15 @@ export function Chat({
       const transcript = messages
         .map((m) => `${m.role === "user" ? "Client" : "Coach"}: ${m.content}`)
         .join("\n\n");
-      const facts = await extractMemories(config, transcript, MEMORY_EXTRACTION_PROMPT);
-      const known = new Set(memories.map((m) => m.text.toLowerCase()));
+      const live = liveFacts(memories);
+      const facts = await extractMemories(
+        config,
+        transcript,
+        // Showing the model what's already known lets it return corrections
+        // rather than near-duplicates that quietly contradict each other.
+        memoryExtractionPrompt(live.map((f) => ({ id: f.id, text: f.text }))),
+      );
+      const known = new Set(live.map((m) => m.text.toLowerCase()));
       const fresh = facts
         .filter((f) => f.text && !known.has(f.text.toLowerCase()))
         .map((f) => ({
@@ -207,6 +215,9 @@ export function Chat({
           createdAt: new Date().toISOString(),
           sourceSessionId: null,
           approved: false,
+          supersededAt: null,
+          replacesId:
+            f.replaces && live.some((x) => x.id === f.replaces) ? f.replaces : null,
         }));
       if (fresh.length) onMemories([...memories, ...fresh]);
     } finally {
@@ -260,13 +271,27 @@ export function Chat({
             </p>
             {pending.map((m) => (
               <div key={m.id} className="flex items-start gap-2 mb-2">
-                <span className="flex-1 text-[14px] leading-snug">{m.text}</span>
+                <span className="flex-1 text-[14px] leading-snug">
+                  {m.text}
+                  {m.replacesId && (
+                    <span className="block text-[12px] text-[var(--color-muted)] mt-0.5">
+                      replaces: “{memories.find((x) => x.id === m.replacesId)?.text}”
+                    </span>
+                  )}
+                </span>
                 <button
-                  onClick={() =>
+                  onClick={() => {
+                    const now = new Date().toISOString();
                     onMemories(
-                      memories.map((x) => (x.id === m.id ? { ...x, approved: true } : x)),
-                    )
-                  }
+                      memories.map((x) => {
+                        if (x.id === m.id) return { ...x, approved: true };
+                        // Retire whatever this fact corrects.
+                        if (m.replacesId && x.id === m.replacesId)
+                          return { ...x, supersededAt: now };
+                        return x;
+                      }),
+                    );
+                  }}
                   className="text-[var(--color-accent-ink)] text-[13px] px-2 font-medium"
                 >
                   Keep

@@ -1,4 +1,5 @@
 import type { CoachPlan } from "../schema/index.ts";
+import { liveFacts } from "../schema/index.ts";
 import {
   ANALYTE_META,
   CONDITION_LABELS,
@@ -192,7 +193,7 @@ export function planDoc(plan: CoachPlan | null): string {
 }
 
 export function memoryDoc(facts: MemoryFact[]): string {
-  const approved = facts.filter((f) => f.approved);
+  const approved = liveFacts(facts);
   const L: string[] = ["# What I know about you", ""];
   if (!approved.length) {
     L.push("Nothing recorded yet.");

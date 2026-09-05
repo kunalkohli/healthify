@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { MemoryFact, Profile } from "../core/schema/index.ts";
+import { liveFacts, type MemoryFact, type Profile } from "../core/schema/index.ts";
 import {
   PROVIDERS,
   activeConfig,
@@ -224,7 +224,7 @@ export function Settings({
     return k;
   }
 
-  const approved = memories.filter((m) => m.approved);
+  const approved = liveFacts(memories);
 
   return (
     <Screen>

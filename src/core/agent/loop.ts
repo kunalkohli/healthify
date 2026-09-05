@@ -71,7 +71,7 @@ export async function extractMemories(
   config: ProviderConfig,
   transcript: string,
   prompt: string,
-): Promise<{ text: string; category: string }[]> {
+): Promise<{ text: string; category: string; replaces?: string | null }[]> {
   const provider = getProvider(config.provider);
   try {
     const text = await provider.complete(config, prompt, transcript);

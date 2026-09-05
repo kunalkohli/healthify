@@ -17,6 +17,9 @@ import { frsSimple } from "./frsSimple.ts";
 import { bloodPressureMetric, metabolicSyndromeMetric, waistToHeightMetric } from "./metrics.ts";
 import { pruneChat } from "../../storage/db.ts";
 import { getProvider } from "../agent/providers/index.ts";
+import { liveFacts, type MemoryFact } from "../schema/index.ts";
+import { memoryDoc } from "../context/generate.ts";
+import { memoryExtractionPrompt } from "../agent/prompts.ts";
 
 const THIS_YEAR = new Date().getFullYear();
 
@@ -505,5 +508,41 @@ describe("history reseeding after a tab switch", () => {
     for (const id of ["anthropic", "gemini", "ollama", "openai_compatible"] as const) {
       expect(getProvider(id).seedHistory([])).toEqual([]);
     }
+  });
+});
+
+describe("memory supersession", () => {
+  const fact = (id: string, text: string, extra: Partial<MemoryFact> = {}): MemoryFact => ({
+    id, text, category: "preference", createdAt: "2026-09-04T00:00:00Z",
+    sourceSessionId: null, approved: true, supersededAt: null, replacesId: null, ...extra,
+  });
+
+  test("superseded facts are excluded from the prompt", () => {
+    const facts = [
+      fact("a", "Skips breakfast", { supersededAt: "2027-03-01T00:00:00Z" }),
+      fact("b", "Eats breakfast most days", { replacesId: "a" }),
+    ];
+    const live = liveFacts(facts);
+    expect(live).toHaveLength(1);
+    expect(live[0].text).toBe("Eats breakfast most days");
+  });
+
+  test("unapproved proposals never reach the prompt", () => {
+    expect(liveFacts([fact("a", "Guessed something", { approved: false })])).toHaveLength(0);
+  });
+
+  test("the rendered doc contains no contradiction", () => {
+    const doc = memoryDoc([
+      fact("a", "Skips breakfast", { supersededAt: "2027-03-01T00:00:00Z" }),
+      fact("b", "Eats breakfast most days"),
+    ]);
+    expect(doc).toContain("Eats breakfast most days");
+    expect(doc).not.toContain("Skips breakfast");
+  });
+
+  test("the extraction prompt shows the model what is already known", () => {
+    const prompt = memoryExtractionPrompt([{ id: "a", text: "Dislikes fish" }]);
+    expect(prompt).toContain("[a] Dislikes fish");
+    expect(prompt).toContain("replaces");
   });
 });
