@@ -44,6 +44,7 @@ export function Chat({
   verbosity,
   plan,
   onPlan,
+  retentionDays,
   messages,
   onMessages,
   memories,
@@ -56,6 +57,7 @@ export function Chat({
   verbosity: Verbosity;
   plan: CoachPlan | null;
   onPlan: (p: CoachPlan) => void;
+  retentionDays: number;
   messages: ChatMessage[];
   onMessages: (m: ChatMessage[]) => void;
   memories: MemoryFact[];
@@ -234,6 +236,13 @@ export function Chat({
           <h1 className="text-[28px] font-semibold tracking-tight">Coach</h1>
           <p className="text-[14px] text-[var(--color-muted)] mt-1">
             Knows your profile, family history, and computed risks.
+            {retentionDays > 0 && (
+              <>
+                {" "}
+                Messages older than {retentionDays === 1 ? "a day" : `${retentionDays} days`} are
+                cleared — what mattered is kept as facts and your plan.
+              </>
+            )}
           </p>
         </div>
 

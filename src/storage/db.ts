@@ -38,6 +38,7 @@ const K = {
   labUnits: "hc:labunits",
   verbosity: "hc:verbosity",
   plan: "hc:plan",
+  chatDays: "hc:chatdays",
   onboarded: "hc:onboarded",
 };
 
@@ -147,6 +148,32 @@ export async function loadChat(): Promise<ChatMessage[]> {
 }
 export async function saveChat(c: ChatMessage[]): Promise<void> {
   await putSecret(K.chat, c);
+}
+
+/** 0 = keep everything. Anything older than this is dropped on load. */
+export type ChatRetention = 1 | 2 | 7 | 0;
+
+export async function loadChatRetention(): Promise<ChatRetention> {
+  return (await get<ChatRetention>(K.chatDays)) ?? 2;
+}
+export async function saveChatRetention(d: ChatRetention): Promise<void> {
+  await set(K.chatDays, d);
+}
+
+/**
+ * Drop transcripts older than the retention window.
+ *
+ * Safe to be aggressive because durable content doesn't live here — it's
+ * distilled into approved facts and the rolling plan, both of which survive.
+ * Keeping months of raw chat on screen just makes the tab noisy.
+ */
+export function pruneChat(messages: ChatMessage[], days: ChatRetention): ChatMessage[] {
+  if (!days) return messages;
+  const cutoff = Date.now() - days * 86_400_000;
+  return messages.filter((m) => {
+    const t = Date.parse(m.createdAt);
+    return Number.isNaN(t) || t >= cutoff;
+  });
 }
 
 export async function loadPlan(): Promise<CoachPlan | null> {

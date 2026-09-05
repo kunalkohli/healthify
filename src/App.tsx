@@ -52,6 +52,7 @@ export default function App() {
   const [labUnits, setLabUnits] = useState<LabUnitSystem>("si");
   const [verbosity, setVerbosity] = useState<Verbosity>("brief");
   const [plan, setPlan] = useState<CoachPlan | null>(null);
+  const [chatDays, setChatDays] = useState<db.ChatRetention>(2);
 
   // Vault metadata is readable while locked; everything else is not.
   useEffect(() => {
@@ -62,7 +63,7 @@ export default function App() {
   }, []);
 
   const loadAll = async () => {
-      const [p, m, j, c, cfg, u, lu, vb, pl, done] = await Promise.all([
+      const [p, m, j, c, cfg, u, lu, vb, pl, cd, done] = await Promise.all([
         db.loadProfile(),
         db.loadMemories(),
         db.loadJournal(),
@@ -72,12 +73,18 @@ export default function App() {
         db.loadLabUnits(),
         db.loadVerbosity(),
         db.loadPlan(),
+        db.loadChatRetention(),
         db.loadOnboarded(),
       ]);
       setProfile(p);
       setMemories(m);
       setJournal(j);
-      setMessages(c);
+      // Trim stale transcripts before anything renders. Durable content has
+      // already been distilled into facts and the plan.
+      const kept = db.pruneChat(c, cd);
+      setMessages(kept);
+      setChatDays(cd);
+      if (kept.length !== c.length) await db.saveChat(kept);
       setProviders(cfg);
       setUnits(u);
       setLabUnits(lu);
@@ -114,6 +121,9 @@ export default function App() {
   useEffect(() => {
     if (ready && unlocked && plan) db.savePlan(plan);
   }, [plan, ready, unlocked]);
+  useEffect(() => {
+    if (ready && unlocked) db.saveChatRetention(chatDays);
+  }, [chatDays, ready, unlocked]);
 
   // Re-lock when the app goes to the background so a handed-over unlocked
   // phone doesn't expose the vault.
@@ -191,6 +201,7 @@ export default function App() {
             verbosity={verbosity}
             plan={plan}
             onPlan={setPlan}
+            retentionDays={chatDays}
             messages={messages}
             onMessages={setMessages}
             memories={memories}
@@ -215,6 +226,9 @@ export default function App() {
             onLabUnits={setLabUnits}
             verbosity={verbosity}
             onVerbosity={setVerbosity}
+            chatDays={chatDays}
+            onChatDays={setChatDays}
+            onClearChat={() => setMessages([])}
             memories={memories}
             onMemories={setMemories}
             profile={profile}

@@ -15,6 +15,7 @@ import { familyFlags } from "./hereditary.ts";
 import { bmiThresholds } from "./anthropometry.ts";
 import { frsSimple } from "./frsSimple.ts";
 import { bloodPressureMetric, metabolicSyndromeMetric, waistToHeightMetric } from "./metrics.ts";
+import { pruneChat } from "../../storage/db.ts";
 
 const THIS_YEAR = new Date().getFullYear();
 
@@ -444,5 +445,28 @@ describe("family editor relation rules", () => {
     expect(relationDisplayLabel(members, "a")).toBe("Sister 1");
     expect(relationDisplayLabel(members, "b")).toBe("Sister 2");
     expect(relationDisplayLabel(members, "c")).toBe("Father");
+  });
+});
+
+describe("chat retention", () => {
+  const msg = (daysAgo: number) => ({
+    id: uid(),
+    role: "user" as const,
+    content: "hello",
+    createdAt: new Date(Date.now() - daysAgo * 86_400_000).toISOString(),
+  });
+
+  test("keeps messages inside the window, drops older ones", () => {
+    const kept = pruneChat([msg(0), msg(1), msg(3), msg(10)], 2);
+    expect(kept).toHaveLength(2);
+  });
+
+  test("0 means keep everything", () => {
+    expect(pruneChat([msg(0), msg(400)], 0)).toHaveLength(2);
+  });
+
+  test("a malformed timestamp is kept rather than silently binned", () => {
+    const bad = { id: uid(), role: "user" as const, content: "x", createdAt: "not-a-date" };
+    expect(pruneChat([bad], 1)).toHaveLength(1);
   });
 });

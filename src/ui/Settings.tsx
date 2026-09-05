@@ -51,6 +51,9 @@ export function Settings({
   onLabUnits,
   verbosity,
   onVerbosity,
+  chatDays,
+  onChatDays,
+  onClearChat,
   memories,
   onMemories,
   profile,
@@ -68,6 +71,9 @@ export function Settings({
   onLabUnits: (u: LabUnitSystem) => void;
   verbosity: Verbosity;
   onVerbosity: (v: Verbosity) => void;
+  chatDays: db.ChatRetention;
+  onChatDays: (d: db.ChatRetention) => void;
+  onClearChat: () => void;
   memories: MemoryFact[];
   onMemories: (m: MemoryFact[]) => void;
   profile: Profile;
@@ -386,6 +392,34 @@ export function Settings({
               {modelError}
             </div>
           )}
+        </Field>
+
+        <Field
+          label="Keep chat transcripts for"
+          hint="Old conversations are cleared automatically. Nothing important is lost — durable facts and your current plan are stored separately and carried forward."
+        >
+          <Segmented
+            value={String(chatDays)}
+            onChange={(v) => onChatDays(Number(v) as db.ChatRetention)}
+            options={[
+              { value: "1", label: "1 day" },
+              { value: "2", label: "2 days" },
+              { value: "7", label: "1 week" },
+              { value: "0", label: "Forever" },
+            ]}
+          />
+          <div className="mt-3">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                if (confirm("Clear the chat transcript now? Saved facts and your plan stay.")) {
+                  onClearChat();
+                }
+              }}
+            >
+              Clear chat transcript now
+            </Button>
+          </div>
         </Field>
 
         <Field
