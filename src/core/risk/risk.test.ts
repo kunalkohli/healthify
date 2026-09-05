@@ -1,5 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { emptyProfile, uid, type Ethnicity, type Profile, type SexAtBirth } from "../schema/index.ts";
+import {
+  availableRelations,
+  emptyProfile,
+  relationDisplayLabel,
+  uid,
+  type Ethnicity,
+  type Profile,
+  type Relation,
+  type SexAtBirth,
+} from "../schema/index.ts";
 import { ascvd } from "./ascvd.ts";
 import { findrisc } from "./findrisc.ts";
 import { familyFlags } from "./hereditary.ts";
@@ -389,5 +398,51 @@ describe("threshold metrics", () => {
     // Waist 95 >= 90 (South Asian male) and BP elevated = 2 met, 3 unmeasured.
     expect(m.value).toBe("2/5");
     expect(m.detail).toContain("Not yet measurable");
+  });
+});
+
+describe("family editor relation rules", () => {
+  test("a second mother or father is not offered", () => {
+    const avail = availableRelations(["mother", "father"]);
+    expect(avail).not.toContain("mother");
+    expect(avail).not.toContain("father");
+  });
+
+  test("siblings and children can repeat", () => {
+    const avail = availableRelations(["sister", "sister", "son"]);
+    expect(avail).toContain("sister");
+    expect(avail).toContain("son");
+    expect(avail).toContain("brother");
+  });
+
+  test("grandparents are unique per side", () => {
+    const avail = availableRelations(["maternal_grandmother"]);
+    expect(avail).not.toContain("maternal_grandmother");
+    expect(avail).toContain("paternal_grandmother");
+  });
+
+  /**
+   * The bug: a <select> holding a value that isn't in its options displays the
+   * first option but keeps the stale value, so the UI said "Father" and adding
+   * produced "Mother". Whatever the stale value, the coerced one must be real.
+   */
+  test("a stale selection always coerces into the available list", () => {
+    const existing: Relation[] = ["mother"];
+    const options = availableRelations(existing);
+    const stale: Relation = "mother"; // no longer offered
+    const coerced = options.includes(stale) ? stale : options[0];
+    expect(options).toContain(coerced);
+    expect(coerced).not.toBe("mother");
+  });
+
+  test("repeated relations get numbered labels", () => {
+    const members = [
+      { id: "a", relation: "sister" as Relation },
+      { id: "b", relation: "sister" as Relation },
+      { id: "c", relation: "father" as Relation },
+    ];
+    expect(relationDisplayLabel(members, "a")).toBe("Sister 1");
+    expect(relationDisplayLabel(members, "b")).toBe("Sister 2");
+    expect(relationDisplayLabel(members, "c")).toBe("Father");
   });
 });

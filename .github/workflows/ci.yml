@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bunx tsc --noEmit
+
+      # These assert the risk calculators still match their published worked
+      # examples. A drifting coefficient silently changes every number the app
+      # shows someone about their own health, so this gates merges.
+      - name: Risk engine tests
+        run: bun test
+
+      - name: Build
+        run: bunx vite build

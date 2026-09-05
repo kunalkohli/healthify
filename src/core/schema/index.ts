@@ -99,6 +99,44 @@ export const SECOND_DEGREE: Relation[] = [
   "paternal_uncle",
 ];
 
+/**
+ * Relations you can only have one of. Everything else — siblings, children,
+ * aunts, uncles, cousins — can legitimately repeat, and the editor previously
+ * blocked adding a second sister.
+ */
+export const UNIQUE_RELATIONS: Relation[] = [
+  "mother",
+  "father",
+  "maternal_grandmother",
+  "maternal_grandfather",
+  "paternal_grandmother",
+  "paternal_grandfather",
+];
+
+export function canAddRelation(r: Relation, existing: Relation[]): boolean {
+  return !UNIQUE_RELATIONS.includes(r) || !existing.includes(r);
+}
+
+export function availableRelations(existing: Relation[]): Relation[] {
+  return Relation.options.filter((r) => canAddRelation(r, existing));
+}
+
+/**
+ * Numbers repeated relations so two sisters are tellable apart.
+ * Returns "Sister" for the first, "Sister 2" for the next, and so on.
+ */
+export function relationDisplayLabel(
+  members: { id: string; relation: Relation }[],
+  id: string,
+): string {
+  const me = members.find((m) => m.id === id);
+  if (!me) return "";
+  const sameKind = members.filter((m) => m.relation === me.relation);
+  const base = RELATION_LABELS[me.relation];
+  if (sameKind.length < 2) return base;
+  return `${base} ${sameKind.findIndex((m) => m.id === id) + 1}`;
+}
+
 export function degreeOf(r: Relation): 1 | 2 | 3 {
   if (FIRST_DEGREE.includes(r)) return 1;
   if (SECOND_DEGREE.includes(r)) return 2;

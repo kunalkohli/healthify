@@ -4,13 +4,13 @@ import {
   RELATION_LABELS,
   Relation,
   Condition,
+  availableRelations,
   degreeOf,
+  relationDisplayLabel,
   uid,
   type FamilyMember,
 } from "../core/schema/index.ts";
 import { Button, Card, Field, NumberInput, Select } from "./primitives.tsx";
-
-const RELATION_OPTIONS = Relation.options.map((r) => ({ value: r, label: RELATION_LABELS[r] }));
 
 /** Ordered so the conditions that actually drive the risk rules appear first. */
 const COMMON_CONDITIONS: Condition[] = [
@@ -56,14 +56,27 @@ export function FamilyEditor({
   const [adding, setAdding] = useState(false);
   const [relation, setRelation] = useState<Relation>("mother");
 
-  const used = new Set(family.map((f) => f.relation));
+  const options = availableRelations(family.map((f) => f.relation)).map((r) => ({
+    value: r,
+    label: RELATION_LABELS[r],
+  }));
+
+  /**
+   * A <select> whose value isn't among its options silently displays the first
+   * one instead, while state keeps the stale value — so the dropdown showed
+   * "Father" and adding produced "Mother". Coerce to something real and use
+   * this single value for both display and insertion.
+   */
+  const selected = options.some((o) => o.value === relation)
+    ? relation
+    : (options[0]?.value ?? "cousin");
 
   function addMember() {
     onChange([
       ...family,
       {
         id: uid(),
-        relation,
+        relation: selected,
         alive: true,
         ageNowOrAtDeath: null,
         causeOfDeath: null,
@@ -88,6 +101,7 @@ export function FamilyEditor({
       {sorted.map((m) => (
         <MemberCard
           key={m.id}
+          label={relationDisplayLabel(family, m.id)}
           member={m}
           onUpdate={(p) => update(m.id, p)}
           onRemove={() => remove(m.id)}
@@ -97,13 +111,7 @@ export function FamilyEditor({
       {adding ? (
         <Card>
           <Field label="Who is this?">
-            <Select
-              value={relation}
-              onChange={setRelation}
-              options={RELATION_OPTIONS.filter(
-                (o) => !used.has(o.value) || o.value === "cousin" || o.value.includes("aunt") || o.value.includes("uncle"),
-              )}
-            />
+            <Select value={selected} onChange={setRelation} options={options} />
           </Field>
           <div className="flex gap-2">
             <Button onClick={addMember}>Add</Button>
@@ -123,10 +131,12 @@ export function FamilyEditor({
 
 function MemberCard({
   member,
+  label,
   onUpdate,
   onRemove,
 }: {
   member: FamilyMember;
+  label: string;
   onUpdate: (p: Partial<FamilyMember>) => void;
   onRemove: () => void;
 }) {
@@ -158,7 +168,7 @@ function MemberCard({
     <Card>
       <div className="flex items-start justify-between" onClick={() => setOpen(!open)}>
         <div className="flex-1">
-          <div className="font-medium">{RELATION_LABELS[member.relation]}</div>
+          <div className="font-medium">{label}</div>
           <div className="text-[14px] text-[var(--color-muted)] mt-0.5">
             {member.conditions.length
               ? member.conditions
@@ -238,7 +248,7 @@ function MemberCard({
           </div>
 
           <Button variant="danger" onClick={onRemove}>
-            Remove {RELATION_LABELS[member.relation].toLowerCase()}
+            Remove {label.toLowerCase()}
           </Button>
         </div>
       )}

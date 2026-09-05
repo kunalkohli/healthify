@@ -1,0 +1,10 @@
+# Every change needs review from the repo owner.
+# Combined with the "require code owner review" rule on main, this means no PR
+# can merge without an explicit approval from @kunalkohli.
+*                       @kunalkohli
+
+# The risk engine decides what numbers people see about their own health.
+# Called out separately so it's obvious in the PR UI why review is required.
+/src/core/risk/         @kunalkohli
+/src/core/schema/       @kunalkohli
+/src/storage/crypto.ts  @kunalkohli
