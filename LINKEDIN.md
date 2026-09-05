@@ -7,15 +7,15 @@ lines have to earn the click.
 
 ## Main post
 
-**723 characters.** Keep it under 800 — LinkedIn shows roughly the first
-200 before "see more", and short posts outperform long ones.
+**763 characters.** Keep it under 800 — LinkedIn cuts to "see more" at
+roughly 200, so the opening line has to say what the thing is.
 
 ```
-🧠 Every time I asked an AI about my health, I started from zero. Who I am, what runs in my family, what I won't eat.
+🩺 I built Healthify — a personal health companion that actually remembers you.
+
+Why? Every time I asked an AI about my health, I started from zero. Who I am, what runs in my family, what I won't eat, what I already tried.
 
 Health isn't a single conversation. It's longitudinal.
-
-So I built Healthify 🩺 — a health companion that remembers you.
 
 📋 Give it your family history once. It builds a profile loaded into every future chat.
 💬 Then just ask. No re-explaining.
