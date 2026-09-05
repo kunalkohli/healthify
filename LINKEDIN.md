@@ -7,13 +7,13 @@ lines have to earn the click.
 
 ## Main post
 
-**771 characters.** Keep it under 800 — LinkedIn cuts to "see more" at
-roughly 200, so the opening line has to say what the thing is.
+**789 characters.** Keep it under 800 — LinkedIn cuts to "see more" at
+roughly 200, so the opening line has to carry the outcome *and* name the thing.
 
 ```
-🩺 I built Healthify — a personal health companion that remembers you and your history.
+🩺 To make better decisions about my health, I built Healthify — a companion that tracks your family history, labs and habits, and remembers you.
 
-Why? Every time I asked an AI about my health, I started from zero. Who I am, what runs in my family, what I won't eat, what I already tried.
+Why? Every time I asked an AI about my health, I started from zero. Who I am, what runs in my family, what I won't eat.
 
 Health isn't a single conversation. It's longitudinal.
 
@@ -27,10 +27,18 @@ Open source — deploy your own.
 📖 https://kunalkohli.github.io/articles/2026-09/healthify
 💻 https://github.com/kunalkohli/healthify
 
-⚠️ Not a medical device. Talk to a doctor.
+⚠️ Not a medical device.
 
 #BuildInPublic #AI #LocalFirst #OpenSource
 ```
+
+### Swappable opening lines
+
+Same body, different angle. All fit under 800 with the body above.
+
+- 🩺 To get health advice that actually fits my life, I built Healthify — a companion that tracks your family history, labs and habits over time.
+- 🩺 To understand the health risks I've inherited, I built Healthify — a companion that tracks your family history and remembers every conversation.
+- 🩺 To stop re-explaining myself to AI, I built Healthify — a personal health companion that tracks your history and remembers you.
 
 ## Alternative — engineering angle
 
