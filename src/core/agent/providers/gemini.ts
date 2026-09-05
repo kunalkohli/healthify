@@ -57,6 +57,14 @@ export const gemini: LLMProvider = {
   defaultModel: "gemini-2.5-flash",
   suggestedModels: ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"],
 
+  seedHistory(msgs) {
+    // Gemini uses "model" rather than "assistant", and parts rather than content.
+    return msgs.map((m) => ({
+      role: m.role === "user" ? "user" : "model",
+      parts: [{ text: m.content }],
+    }));
+  },
+
   async listModels(cfg): Promise<ModelOption[]> {
     const res = await fetch(
       `${BASE}?key=${encodeURIComponent(cfg.apiKey)}&pageSize=200`,

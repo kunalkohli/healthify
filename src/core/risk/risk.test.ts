@@ -16,6 +16,7 @@ import { bmiThresholds } from "./anthropometry.ts";
 import { frsSimple } from "./frsSimple.ts";
 import { bloodPressureMetric, metabolicSyndromeMetric, waistToHeightMetric } from "./metrics.ts";
 import { pruneChat } from "../../storage/db.ts";
+import { getProvider } from "../agent/providers/index.ts";
 
 const THIS_YEAR = new Date().getFullYear();
 
@@ -468,5 +469,41 @@ describe("chat retention", () => {
   test("a malformed timestamp is kept rather than silently binned", () => {
     const bad = { id: uid(), role: "user" as const, content: "x", createdAt: "not-a-date" };
     expect(pruneChat([bad], 1)).toHaveLength(1);
+  });
+});
+
+describe("history reseeding after a tab switch", () => {
+  const rendered = [
+    { role: "user" as const, content: "what should I focus on?" },
+    { role: "assistant" as const, content: "blood pressure first" },
+  ];
+
+  /**
+   * The chat component unmounts on tab switch and loses its in-memory
+   * history. Reseeding it with the wrong shape is worse than losing it —
+   * the request fails outright. Each provider must emit its own format.
+   */
+  test("anthropic gets role/content", () => {
+    const h = getProvider("anthropic").seedHistory(rendered);
+    expect(h[0]).toEqual({ role: "user", content: "what should I focus on?" });
+    expect(h[1].role).toBe("assistant");
+  });
+
+  test("gemini gets model/parts, not assistant/content", () => {
+    const h = getProvider("gemini").seedHistory(rendered);
+    expect(h[1].role).toBe("model");
+    expect(h[1].parts[0].text).toBe("blood pressure first");
+    expect(h[1].content).toBeUndefined();
+  });
+
+  test("openai-compatible gets role/content", () => {
+    const h = getProvider("openai_compatible").seedHistory(rendered);
+    expect(h[1]).toEqual({ role: "assistant", content: "blood pressure first" });
+  });
+
+  test("every provider round-trips an empty conversation", () => {
+    for (const id of ["anthropic", "gemini", "ollama", "openai_compatible"] as const) {
+      expect(getProvider(id).seedHistory([])).toEqual([]);
+    }
   });
 });

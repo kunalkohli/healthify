@@ -22,7 +22,11 @@ import {
   type Verbosity,
 } from "../core/agent/prompts.ts";
 import { chat, extractMemories } from "../core/agent/loop.ts";
-import { configProblem, type ProviderConfig } from "../core/agent/providers/index.ts";
+import {
+  configProblem,
+  getProvider,
+  type ProviderConfig,
+} from "../core/agent/providers/index.ts";
 import { Button, Empty } from "./primitives.tsx";
 import { IconMic, IconSend, IconStop } from "./icons.tsx";
 import { isStandalone, useSpeech } from "./useSpeech.ts";
@@ -91,9 +95,9 @@ export function Chat({
   const seeded = useRef(false);
   if (!seeded.current) {
     seeded.current = true;
-    history.current = messages
-      .slice(-RECENT_TURNS)
-      .map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.content }));
+    history.current = getProvider(config.provider).seedHistory(
+      messages.slice(-RECENT_TURNS).map((m) => ({ role: m.role, content: m.content })),
+    );
   }
 
   useEffect(() => {

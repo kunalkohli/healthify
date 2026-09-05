@@ -30,6 +30,10 @@ export const anthropic: LLMProvider = {
   defaultModel: "claude-sonnet-4-6",
   suggestedModels: ["claude-sonnet-4-6", "claude-opus-4-5", "claude-haiku-4-5"],
 
+  seedHistory(msgs) {
+    return msgs.map((m) => ({ role: m.role, content: m.content }));
+  },
+
   async listModels(cfg): Promise<ModelOption[]> {
     const res = await fetch("https://api.anthropic.com/v1/models?limit=100", {
       headers: headers(cfg),

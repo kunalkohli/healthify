@@ -59,6 +59,10 @@ function makeProvider(
     suggestedModels: opts.suggestedModels,
     defaultBaseUrl: opts.defaultBaseUrl,
 
+    seedHistory(msgs) {
+      return msgs.map((m) => ({ role: m.role, content: m.content }));
+    },
+
     async listModels(cfg): Promise<ModelOption[]> {
       const base = (cfg.baseUrl ?? "").replace(/\/$/, "");
       const res = await fetch(`${base}/models`, {

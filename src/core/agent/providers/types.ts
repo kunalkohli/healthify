@@ -42,6 +42,16 @@ export interface LLMProvider {
   /** Single-shot completion, used for the memory-extraction pass. */
   complete(cfg: ProviderConfig, system: string, user: string): Promise<string>;
   /**
+   * Rebuild provider-native history from plain rendered messages.
+   *
+   * Needed because the chat component unmounts on tab switch and loses its
+   * in-memory history. Each provider has a different message shape, so this
+   * cannot be done generically — Gemini wants {role:"model", parts:[...]}
+   * where the others want {role:"assistant", content:"..."}.
+   */
+  seedHistory(msgs: { role: "user" | "assistant"; content: string }[]): any[];
+
+  /**
    * Ask the provider which models this key can actually use.
    * Hardcoded model IDs go stale and produce 404s, so the picker reads live.
    */
