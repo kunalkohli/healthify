@@ -3,9 +3,9 @@
 A personal, local-first health coach you run yourself. Installs to your phone's home
 screen as a web app.
 
-Ask it things like *"what should I eat to lower my diabetes risk, given my dad was
-diagnosed at 52?"* and get an answer grounded in your actual family history and
-validated risk calculators — not a language model's recollection of them.
+Ask it things like *"high blood pressure runs in my family — what should I actually
+change first?"* and get an answer grounded in your own family history and validated
+risk calculators, not a language model's recollection of them.
 
 **Single user, self-hosted. No accounts, no backend, no database, no telemetry.**
 Everything lives encrypted in your own device's storage.
